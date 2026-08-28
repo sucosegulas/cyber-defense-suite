@@ -71,6 +71,11 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Keep-alive para UptimeRobot
+app.get('/api/keep-alive', (req, res) => {
+  res.json({ status: 'alive', timestamp: new Date().toISOString() });
+});
+
 // Verifica se admin está configurado
 app.get('/api/auth/status', (req, res) => {
   res.json({ configured: auth.isAdminConfigured() });
