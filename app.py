@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import random
 import datetime
+import subprocess
+import platform
 
 app = FastAPI(title="NetSec Guard - Network Security & Pentest Management", version="1.0.0")
 
@@ -138,3 +140,283 @@ def get_compliance():
 @app.get("/api/vulnerabilities")
 def get_vulnerabilities():
     return vulnerability_db
+
+# ========== NETWORK MONITORING & FIREWALL ==========
+
+class FirewallActivateRequest(BaseModel):
+    confirm: bool
+    rules: list = []
+
+@app.get("/api/network-monitor")
+def monitor_network():
+    """Monitora conexões de rede ativas"""
+    connections = []
+    os_type = platform.system()
+    
+    try:
+        if os_type == "Windows":
+            # Windows: netstat -ano
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, timeout=10)
+            lines = result.stdout.split('\n')
+            
+            for line in lines[1:]:  # Skip header
+                parts = line.split()
+                if len(parts) >= 5 and parts[0] in ['TCP', 'UDP']:
+                    proto = parts[0]
+                    local_addr = parts[1]
+                    remote_addr = parts[2]
+                    state = parts[3] if proto == 'TCP' else 'UDP'
+                    pid = parts[4] if len(parts) > 4 else '-'
+                    
+                    # Get process name
+                    proc_name = "unknown"
+                    try:
+                        if pid != '-' and pid.isdigit():
+                            proc_result = subprocess.run(
+                                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                                capture_output=True, text=True, timeout=5
+                            )
+                            if proc_result.stdout.strip():
+                                proc_name = proc_result.stdout.split(',')[0].strip('"')
+                    except:
+                        pass
+                    
+                    # Identify suspicious connections
+                    suspicious = False
+                    reason = ""
+                    
+                    if remote_addr == "0.0.0.0:0" or remote_addr == "*:*":
+                        reason = "Listening"
+                    elif remote_addr.startswith("127.") or remote_addr.startswith("0."):
+                        reason = "Local"
+                    elif remote_addr.startswith("192.168.") or remote_addr.startswith("10.") or remote_addr.startswith("172."):
+                        reason = "Rede Local"
+                    else:
+                        reason = "Internet"
+                        if proto == 'TCP' and state == 'ESTABLISHED':
+                            suspicious = False  # Normal connection
+                    
+                    connections.append({
+                        "protocol": proto,
+                        "local": local_addr,
+                        "remote": remote_addr,
+                        "state": state,
+                        "pid": pid,
+                        "process": proc_name,
+                        "type": reason,
+                        "suspicious": suspicious
+                    })
+        else:
+            # Linux/Mac: ss or netstat
+            result = subprocess.run(["ss", "-tuln"], capture_output=True, text=True, timeout=10)
+            lines = result.stdout.split('\n')
+            
+            for line in lines[1:]:
+                parts = line.split()
+                if len(parts) >= 5:
+                    proto = parts[0]
+                    state = parts[1] if len(parts) > 1 else 'LISTEN'
+                    local = parts[4] if len(parts) > 4 else '-'
+                    
+                    connections.append({
+                        "protocol": proto.upper(),
+                        "local": local,
+                        "remote": "-",
+                        "state": state,
+                        "pid": "-",
+                        "process": "system",
+                        "type": "Local",
+                        "suspicious": False
+                    })
+    except Exception as e:
+        connections.append({
+            "protocol": "ERROR",
+            "local": "-",
+            "remote": "-",
+            "state": str(e),
+            "pid": "-",
+            "process": "-",
+            "type": "Erro",
+            "suspicious": False
+        })
+    
+    # Statistics
+    total = len(connections)
+    tcp_count = sum(1 for c in connections if c['protocol'] == 'TCP')
+    udp_count = sum(1 for c in connections if c['protocol'] == 'UDP')
+    established = sum(1 for c in connections if c.get('state') == 'ESTABLISHED')
+    listening = sum(1 for c in connections if c.get('state') == 'LISTENING')
+    
+    return {
+        "scan_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "os": platform.system(),
+        "total_connections": total,
+        "statistics": {
+            "tcp": tcp_count,
+            "udp": udp_count,
+            "established": established,
+            "listening": listening
+        },
+        "connections": connections[:50]  # Limit to 50 for display
+    }
+
+@app.get("/api/firewall-status")
+def get_firewall_status():
+    """Verifica status do firewall do sistema"""
+    os_type = platform.system()
+    firewall_info = {
+        "os": os_type,
+        "firewall_active": False,
+        "firewall_name": "",
+        "rules_count": 0,
+        "protection_level": "Nenhum",
+        "details": []
+    }
+    
+    try:
+        if os_type == "Windows":
+            # Check Windows Firewall
+            result = subprocess.run(
+                ["netsh", "advfirewall", "show", "allprofiles"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            output = result.stdout
+            firewall_info["firewall_name"] = "Windows Defender Firewall"
+            
+            # Parse status
+            if "State" in output:
+                for line in output.split('\n'):
+                    if 'ON' in line.upper() and 'STATE' in line.upper():
+                        firewall_info["firewall_active"] = True
+                        break
+            
+            # Count rules
+            rules_result = subprocess.run(
+                ["netsh", "advfirewall", "firewall", "show", "rule", "name=all"],
+                capture_output=True, text=True, timeout=10
+            )
+            firewall_info["rules_count"] = rules_result.stdout.count("Rule Name") if rules_result.stdout else 0
+            
+            # Protection level
+            if firewall_info["firewall_active"]:
+                if firewall_info["rules_count"] > 50:
+                    firewall_info["protection_level"] = "Alto"
+                elif firewall_info["rules_count"] > 20:
+                    firewall_info["protection_level"] = "Médio"
+                else:
+                    firewall_info["protection_level"] = "Baixo"
+            else:
+                firewall_info["protection_level"] = "Desativado"
+            
+            # Details
+            firewall_info["details"] = [
+                {"name": "Firewall Ativo", "status": firewall_info["firewall_active"]},
+                {"name": "Regras Configuradas", "status": True, "count": firewall_info["rules_count"]},
+                {"name": "Proteção de Entrada", "status": firewall_info["firewall_active"]},
+                {"name": "Proteção de Saída", "status": firewall_info["firewall_active"]},
+                {"name": "Log de Tráfego", "status": True}
+            ]
+            
+        elif os_type == "Linux":
+            # Check iptables
+            result = subprocess.run(["iptables", "-L", "-n"], capture_output=True, text=True, timeout=10)
+            firewall_info["firewall_name"] = "iptables"
+            firewall_info["firewall_active"] = "Chain INPUT (policy DROP)" in result.stdout or "ACCEPT" in result.stdout
+            firewall_info["rules_count"] = result.stdout.count("Chain")
+            firewall_info["protection_level"] = "Alto" if firewall_info["firewall_active"] else "Desativado"
+            firewall_info["details"] = [
+                {"name": "iptables Ativo", "status": firewall_info["firewall_active"]},
+                {"name": "Chain INPUT", "status": True},
+                {"name": "Chain FORWARD", "status": True},
+                {"name": "Chain OUTPUT", "status": True}
+            ]
+    except Exception as e:
+        firewall_info["details"] = [{"name": "Erro", "status": False, "error": str(e)}]
+    
+    return firewall_info
+
+@app.post("/api/firewall-activate")
+def activate_firewall(req: FirewallActivateRequest):
+    """Ativa o firewall com regras de proteção"""
+    if not req.confirm:
+        raise HTTPException(status_code=400, detail="Confirmação necessária para ativar o firewall.")
+    
+    os_type = platform.system()
+    result = {
+        "activated": False,
+        "os": os_type,
+        "rules_applied": [],
+        "message": "",
+        "protection_level": "Nenhum"
+    }
+    
+    try:
+        if os_type == "Windows":
+            # Enable Windows Firewall on all profiles
+            subprocess.run(
+                ["netsh", "advfirewall", "set", "allprofiles", "state", "on"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            # Enable logging
+            subprocess.run(
+                ["netsh", "advfirewall", "set", "allprofiles", "logging", "filename", "C:\\Windows\\System32\\LogFiles\\Firewall\\pfirewall.log"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            # Block common attack ports (inbound)
+            dangerous_ports = [445, 3389, 5900, 135, 137, 138, 139]
+            for port in dangerous_ports:
+                subprocess.run(
+                    ["netsh", "advfirewall", "firewall", "add", "rule",
+                     f"name=Block Port {port} (CyberGuard)",
+                     "dir=in", "action=block", "protocol=tcp",
+                     f"localport={port}", "enable=yes"],
+                    capture_output=True, text=True, timeout=10
+                )
+                result["rules_applied"].append(f"Bloqueio porta {port}/TCP (entrada)")
+            
+            # Allow common safe ports
+            safe_ports = [80, 443, 53, 8080]
+            for port in safe_ports:
+                subprocess.run(
+                    ["netsh", "advfirewall", "firewall", "add", "rule",
+                     f"name=Allow Port {port} (CyberGuard)",
+                     "dir=in", "action=allow", "protocol=tcp",
+                     f"localport={port}", "enable=yes"],
+                    capture_output=True, text=True, timeout=10
+                )
+                result["rules_applied"].append(f"Permitido porta {port}/TCP (entrada)")
+            
+            result["activated"] = True
+            result["message"] = "Firewall Windows ativado com sucesso! Regras de proteção aplicadas."
+            result["protection_level"] = "Alto"
+            
+        elif os_type == "Linux":
+            # Enable iptables rules
+            rules = [
+                "iptables -P INPUT DROP",
+                "iptables -P FORWARD DROP",
+                "iptables -P OUTPUT ACCEPT",
+                "iptables -A INPUT -i lo -j ACCEPT",
+                "iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT",
+                "iptables -A INPUT -p tcp --dport 22 -j ACCEPT",
+                "iptables -A INPUT -p tcp --dport 80 -j ACCEPT",
+                "iptables -A INPUT -p tcp --dport 443 -j ACCEPT",
+                "iptables -A INPUT -p icmp -j ACCEPT"
+            ]
+            
+            for rule in rules:
+                subprocess.run(rule.split(), capture_output=True, text=True, timeout=10)
+                result["rules_applied"].append(rule)
+            
+            result["activated"] = True
+            result["message"] = "Firewall iptables ativado com sucesso! Regras de proteção aplicadas."
+            result["protection_level"] = "Alto"
+            
+    except Exception as e:
+        result["message"] = f"Erro ao ativar firewall: {str(e)}"
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+    return result

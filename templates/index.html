@@ -70,6 +70,9 @@
             <button onclick="switchTab('wifi-edu')" id="tab-wifi-edu" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
                 <i class="fa-solid fa-wifi"></i> <span>Educação WiFi</span>
             </button>
+            <button onclick="switchTab('firewall')" id="tab-firewall" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-shield-halved"></i> <span>Monitor & Firewall</span>
+            </button>
         </div>
 
         <!-- Tab 1: Network Scanner -->
@@ -688,6 +691,110 @@
 
         </section>
 
+        <!-- Tab 7: Monitor de Rede & Firewall -->
+        <section id="content-firewall" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="bg-red-500/20 p-3 rounded-xl">
+                        <i class="fa-solid fa-shield-halved text-red-400 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Monitor de Rede & Firewall</h2>
+                        <p class="text-gray-400">Monitore conexões ativas e ative o firewall do sistema</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status do Firewall -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-red-400"><i class="fa-solid fa-shield mr-2"></i>Status do Firewall</h3>
+                    <button onclick="checkFirewallStatus()" class="bg-cyber-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-cyber-600 transition"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                </div>
+                <div id="firewall-status" class="space-y-4">
+                    <p class="text-gray-400 text-sm">Clique em "Atualizar" para verificar o status do firewall.</p>
+                </div>
+            </div>
+
+            <!-- Ativar Firewall -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-amber-400 mb-4"><i class="fa-solid fa-lock mr-2"></i>Ativar Firewall com Regras de Proteção</h3>
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+                    <p class="text-amber-300 text-sm"><i class="fa-solid fa-exclamation-triangle mr-2"></i><strong>Atenção:</strong> Ativar o firewall pode bloquear algumas conexões. Certifique-se de que as aplicações necessárias estão configuradas.</p>
+                </div>
+                <div class="space-y-3 mb-4">
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" id="fw-confirm" class="w-5 h-5 rounded text-red-500 focus:ring-red-400">
+                        <span class="text-gray-300">Eu entendo que o firewall será ativado e posso bloquear algumas conexões</span>
+                    </label>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="activateFirewall()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold transition flex items-center space-x-2">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Ativar Firewall</span>
+                    </button>
+                    <button onclick="monitorNetwork()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-lg font-bold transition flex items-center space-x-2">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>Monitorar Conexões</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultado da Ativação -->
+            <div id="firewall-activate-result" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <h3 class="font-bold text-lg text-emerald-400 border-b border-cyber-700 pb-2"><i class="fa-solid fa-check-circle mr-2"></i>Resultado da Ativação</h3>
+                <div id="firewall-activate-content"></div>
+            </div>
+
+            <!-- Monitor de Conexões -->
+            <div id="network-monitor" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <div class="flex justify-between items-center border-b border-cyber-700 pb-3">
+                    <h3 class="font-bold text-lg text-cyan-400"><i class="fa-solid fa-network-wired mr-2"></i>Monitor de Conexões de Rede</h3>
+                    <span id="monitor-time" class="text-xs text-gray-400"></span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">Total de Conexões</p>
+                        <p id="monitor-total" class="text-lg font-mono font-bold text-white">0</p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">TCP</p>
+                        <p id="monitor-tcp" class="text-lg font-mono font-bold text-cyan-400">0</p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">UDP</p>
+                        <p id="monitor-udp" class="text-lg font-mono font-bold text-emerald-400">0</p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">Estabelecidas</p>
+                        <p id="monitor-established" class="text-lg font-mono font-bold text-amber-400">0</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-gray-300 mb-2">Conexões Ativas:</h4>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-cyber-800">
+                                <tr class="bg-cyber-700 text-xs text-gray-300">
+                                    <th class="p-3">Proto</th>
+                                    <th class="p-3">Local</th>
+                                    <th class="p-3">Remoto</th>
+                                    <th class="p-3">Estado</th>
+                                    <th class="p-3">PID</th>
+                                    <th class="p-3">Processo</th>
+                                    <th class="p-3">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitor-table-body" class="divide-y divide-cyber-700 font-mono text-xs">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
     </main>
 
     <!-- Footer -->
@@ -697,7 +804,7 @@
 
     <script>
         function switchTab(tab) {
-            ['scanner', 'audit', 'compliance', 'vulns', 'leigos', 'wifi-edu'].forEach(t => {
+            ['scanner', 'audit', 'compliance', 'vulns', 'leigos', 'wifi-edu', 'firewall'].forEach(t => {
                 document.getElementById(`content-${t}`).classList.add('hidden');
                 document.getElementById(`tab-${t}`).className = 'px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2';
             });
@@ -707,6 +814,7 @@
             if (tab === 'compliance') loadCompliance();
             if (tab === 'vulns') loadVulnerabilities();
             if (tab === 'leigos') loadPortStatuses();
+            if (tab === 'firewall') checkFirewallStatus();
         }
 
         async function runScan() {
@@ -1381,6 +1489,158 @@
             navigator.clipboard.writeText(password).then(() => {
                 alert('Senha copiada para a área de transferência!');
             });
+        }
+
+        // ========== FUNÇÕES DA ABA FIREWALL ==========
+
+        async function checkFirewallStatus() {
+            const statusEl = document.getElementById('firewall-status');
+            statusEl.innerHTML = '<p class="text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Verificando status do firewall...</p>';
+
+            try {
+                const response = await fetch('/api/firewall-status');
+                const data = await response.json();
+
+                let html = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                            <p class="text-xs text-gray-400">Firewall</p>
+                            <p class="text-lg font-bold ${data.firewall_active ? 'text-emerald-400' : 'text-red-400'}">${data.firewall_active ? 'ATIVO' : 'INATIVO'}</p>
+                        </div>
+                        <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                            <p class="text-xs text-gray-400">Nome</p>
+                            <p class="text-sm font-semibold text-white">${data.firewall_name}</p>
+                        </div>
+                        <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                            <p class="text-xs text-gray-400">Nível de Proteção</p>
+                            <p class="text-lg font-bold ${data.protection_level === 'Alto' ? 'text-emerald-400' : (data.protection_level === 'Médio' ? 'text-amber-400' : 'text-red-400')}">${data.protection_level}</p>
+                        </div>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400 mb-2">Regras Configuradas: <span class="text-white font-bold">${data.rules_count}</span></p>
+                        <div class="space-y-2">
+                `;
+
+                data.details.forEach(detail => {
+                    html += `
+                        <div class="flex items-center justify-between ${detail.status ? 'text-emerald-400' : 'text-red-400'}">
+                            <span class="text-sm">${detail.name}</span>
+                            <i class="fa-solid ${detail.status ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                statusEl.innerHTML = html;
+            } catch (err) {
+                statusEl.innerHTML = '<p class="text-red-400"><i class="fa-solid fa-exclamation-circle mr-2"></i>Erro ao verificar status do firewall.</p>';
+            }
+        }
+
+        async function activateFirewall() {
+            const confirmCheckbox = document.getElementById('fw-confirm');
+            if (!confirmCheckbox.checked) {
+                alert('Por favor, confirme que entende que o firewall será ativado.');
+                return;
+            }
+
+            const resultEl = document.getElementById('firewall-activate-result');
+            const contentEl = document.getElementById('firewall-activate-content');
+            resultEl.classList.remove('hidden');
+            contentEl.innerHTML = '<p class="text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Ativando firewall...</p>';
+
+            try {
+                const response = await fetch('/api/firewall-activate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ confirm: true })
+                });
+                const data = await response.json();
+
+                let html = `
+                    <div class="bg-emerald-950/50 border border-emerald-700 rounded-lg p-4 mb-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <i class="fa-solid fa-check-circle text-emerald-400 text-xl"></i>
+                            <h4 class="font-bold text-emerald-400">${data.activated ? 'FIREWALL ATIVADO COM SUCESSO' : 'ERRO AO ATIVAR'}</h4>
+                        </div>
+                        <p class="text-gray-300 text-sm">${data.message}</p>
+                        <p class="text-emerald-300 text-xs mt-2">Nível de Proteção: <strong>${data.protection_level}</strong></p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <h5 class="font-bold text-white mb-2"><i class="fa-solid fa-list-check mr-2 text-cyan-400"></i>Regras Aplicadas:</h5>
+                        <div class="space-y-1 max-h-48 overflow-y-auto">
+                `;
+
+                data.rules_applied.forEach(rule => {
+                    html += `
+                        <div class="flex items-center space-x-2 text-xs text-gray-300">
+                            <i class="fa-solid fa-check text-emerald-400"></i>
+                            <span>${rule}</span>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                contentEl.innerHTML = html;
+                checkFirewallStatus(); // Refresh status
+            } catch (err) {
+                contentEl.innerHTML = '<p class="text-red-400"><i class="fa-solid fa-exclamation-circle mr-2"></i>Erro ao ativar firewall. Verifique se tem permissões de administrador.</p>';
+            }
+        }
+
+        async function monitorNetwork() {
+            const monitorEl = document.getElementById('network-monitor');
+            const tableBody = document.getElementById('monitor-table-body');
+            monitorEl.classList.remove('hidden');
+            tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Monitorando conexões...</td></tr>';
+
+            try {
+                const response = await fetch('/api/network-monitor');
+                const data = await response.json();
+
+                document.getElementById('monitor-time').innerText = data.scan_time;
+                document.getElementById('monitor-total').innerText = data.total_connections;
+                document.getElementById('monitor-tcp').innerText = data.statistics.tcp;
+                document.getElementById('monitor-udp').innerText = data.statistics.udp;
+                document.getElementById('monitor-established').innerText = data.statistics.established;
+
+                tableBody.innerHTML = '';
+                data.connections.forEach(conn => {
+                    const typeColor = {
+                        'Local': 'text-emerald-400 bg-emerald-500/10',
+                        'Rede Local': 'text-cyan-400 bg-cyan-500/10',
+                        'Internet': 'text-amber-400 bg-amber-500/10',
+                        'Listening': 'text-purple-400 bg-purple-500/10',
+                        'Erro': 'text-red-400 bg-red-500/10'
+                    }[conn.type] || 'text-gray-400 bg-gray-500/10';
+
+                    tableBody.innerHTML += `
+                        <tr class="hover:bg-cyber-700/50 ${conn.suspicious ? 'bg-red-950/30' : ''}">
+                            <td class="p-3 font-bold ${conn.protocol === 'TCP' ? 'text-cyan-400' : 'text-emerald-400'}">${conn.protocol}</td>
+                            <td class="p-3 text-gray-300">${conn.local}</td>
+                            <td class="p-3 text-gray-300">${conn.remote}</td>
+                            <td class="p-3 text-white">${conn.state}</td>
+                            <td class="p-3 text-gray-400">${conn.pid}</td>
+                            <td class="p-3 text-gray-300">${conn.process}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs ${typeColor}">${conn.type}</span></td>
+                        </tr>
+                    `;
+                });
+
+                if (data.connections.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">Nenhuma conexão encontrada</td></tr>';
+                }
+            } catch (err) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-red-400">Erro ao monitorar conexões</td></tr>';
+            }
         }
     </script>
 </body>
