@@ -65,7 +65,10 @@ vulnerability_db = [
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(base_dir, "templates", "index.html")
+    with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
 
 @app.get("/health")
