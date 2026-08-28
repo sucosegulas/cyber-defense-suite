@@ -5,8 +5,36 @@ import random
 import datetime
 import subprocess
 import platform
+import asyncio
+import os
 
 app = FastAPI(title="NetSec Guard - Network Security & Pentest Management", version="1.0.0")
+
+# ========== KEEP-ALIVE (Prevent Render Free Tier Sleep) ==========
+@app.get("/api/keep-alive")
+def keep_alive():
+    """Endpoint para manter o serviço ativo no Render"""
+    return {
+        "status": "alive",
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "message": "Cyber Defense Suite is running!"
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    """Tarefa em background para manter o serviço ativo"""
+    async def keep_alive_task():
+        while True:
+            await asyncio.sleep(600)  # A cada 10 minutos
+            try:
+                import urllib.request
+                url = os.environ.get("RENDER_EXTERNAL_URL", "http://localhost:8000")
+                if url and "localhost" not in url:
+                    urllib.request.urlopen(f"{url}/api/keep-alive", timeout=10)
+            except:
+                pass
+    
+    asyncio.create_task(keep_alive_task())
 
 class ScanRequest(BaseModel):
     target: str
@@ -39,6 +67,11 @@ vulnerability_db = [
 def read_root():
     with open("templates/index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Render"""
+    return {"status": "healthy"}
 
 @app.post("/api/scan")
 def scan_network(req: ScanRequest):
