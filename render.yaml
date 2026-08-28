@@ -1,12 +1,8 @@
 services:
   - type: web
     name: cyber-defense-suite
-    runtime: node
+    runtime: docker
     plan: free
-    buildCommand: npm install
-    startCommand: node index.js
     envVars:
-      - key: NODE_VERSION
-        value: 20.11.0
       - key: JWT_SECRET
         generateValue: true
