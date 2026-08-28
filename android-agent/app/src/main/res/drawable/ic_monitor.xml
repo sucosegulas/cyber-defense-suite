@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Monitor -->
+    <path
+        android:pathData="M8,8 L40,8 C42.2,8 44,9.8 44,12 L44,32 C44,34.2 42.2,36 40,36 L8,36 C5.8,36 4,34.2 4,32 L4,12 C4,9.8 5.8,8 8,8 Z"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="2"
+        android:fillColor="#00000000" />
+
+    <!-- Tela interna -->
+    <path
+        android:pathData="M8,12 L40,12 L40,32 L8,32 Z"
+        android:fillColor="#818CF8"
+        android:fillAlpha="0.15" />
+
+    <!-- Olho (monitoramento) -->
+    <path
+        android:pathData="M24,18 C19,18 15,22 15,22 C15,22 19,26 24,26 C29,26 33,22 33,22 C33,22 29,18 24,18 Z"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000" />
+
+    <path
+        android:pathData="M24,20 C22.9,20 22,20.9 22,22 C22,23.1 22.9,24 24,24 C25.1,24 26,23.1 26,22 C26,20.9 25.1,20 24,20 Z"
+        android:fillColor="#818CF8" />
+
+    <!-- Base do monitor -->
+    <path
+        android:pathData="M24,36 L24,40"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="2" />
+
+    <path
+        android:pathData="M18,40 L30,40"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>
