@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: screenwatch-server
+    name: cyber-defense-suite
     runtime: node
     plan: free
     buildCommand: npm install
