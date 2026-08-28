@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetSec Guard - Network Security & Pentest Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            900: '#0a0f1d',
+                            800: '#111827',
+                            700: '#1f293d',
+                            600: '#374151',
+                            accent: '#10b981',
+                            neon: '#06b6d4',
+                            alert: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-cyber-900 text-gray-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-cyber-800 border-b border-cyber-700 px-6 py-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-cyber-accent text-cyber-900 p-2 rounded-lg font-bold text-xl flex items-center justify-center w-10 h-10">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wider text-cyber-neon">NETSEC GUARD</h1>
+                <p class="text-xs text-gray-400">Security Operations & Pentest Management (Kali Linux & NIST CSF)</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-900 text-emerald-300 border border-emerald-700">
+                <span class="w-2 h-2 mr-2 bg-emerald-400 rounded-full animate-pulse"></span> Sistema Operacional
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Tabs Navigation -->
+        <div class="flex space-x-2 border-b border-cyber-700 pb-3">
+            <button onclick="switchTab('scanner')" id="tab-scanner" class="px-4 py-2 rounded-lg font-semibold bg-cyber-700 text-cyber-neon transition flex items-center space-x-2">
+                <i class="fa-solid fa-network-wired"></i> <span>Scanner de Rede (Nmap)</span>
+            </button>
+            <button onclick="switchTab('audit')" id="tab-audit" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-key"></i> <span>Auditoria de Senhas (Hydra)</span>
+            </button>
+            <button onclick="switchTab('compliance')" id="tab-compliance" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-clipboard-check"></i> <span>Conformidade NIST CSF</span>
+            </button>
+            <button onclick="switchTab('vulns')" id="tab-vulns" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-bug"></i> <span>Base de Vulnerabilidades</span>
+            </button>
+            <button onclick="switchTab('leigos')" id="tab-leigos" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-book-open"></i> <span>Guia para Leigos</span>
+            </button>
+            <button onclick="switchTab('wifi-edu')" id="tab-wifi-edu" class="px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-wifi"></i> <span>Educação WiFi</span>
+            </button>
+        </div>
+
+        <!-- Tab 1: Network Scanner -->
+        <section id="content-scanner" class="space-y-6">
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-bold text-cyber-neon mb-4"><i class="fa-solid fa-radar mr-2"></i>Scanner de Portas e Alvo (Nmap Engine)</h2>
+                <div class="flex space-x-4">
+                    <input type="text" id="scan-target" placeholder="Ex: 192.168.1.1 ou target.local" value="192.168.1.100" class="flex-1 bg-cyber-900 border border-cyber-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyber-neon">
+                    <button onclick="runScan()" class="bg-cyber-neon text-cyber-900 px-6 py-3 rounded-lg font-bold hover:bg-cyan-400 transition flex items-center space-x-2">
+                        <i class="fa-solid fa-play"></i> <span>Executar Scan</span>
+                    </button>
+                    <button onclick="discoverLocalDevices()" class="bg-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-emerald-500 transition flex items-center space-x-2">
+                        <i class="fa-solid fa-wifi"></i> <span>Descobrir Dispositivos Próximos</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Local Devices Discovery Results -->
+            <div id="local-devices-results" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <h3 class="font-bold text-lg text-emerald-400 border-b border-cyber-700 pb-2"><i class="fa-solid fa-network-wired mr-2"></i>Dispositivos e Proxies na Rede Local</h3>
+                <div id="local-devices-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <div id="scan-results" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <div class="flex justify-between items-center border-b border-cyber-700 pb-3">
+                    <h3 class="font-bold text-lg text-emerald-400">Resultados do Escaneamento</h3>
+                    <span id="scan-time" class="text-xs text-gray-400"></span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">Alvo</p>
+                        <p id="res-target" class="text-lg font-mono font-bold text-white"></p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">Sistema Operacional</p>
+                        <p id="res-os" class="text-sm font-semibold text-cyan-300"></p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg border border-cyber-700">
+                        <p class="text-xs text-gray-400">Nível de Risco</p>
+                        <p id="res-risk" class="text-lg font-bold text-red-400"></p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-gray-300 mb-2">Portas Abertas & Serviços Detectados:</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-cyber-700 text-xs text-gray-300">
+                                    <th class="p-3">Porta</th>
+                                    <th class="p-3">Serviço</th>
+                                    <th class="p-3">Estado</th>
+                                    <th class="p-3">Banner / Versão</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ports-table-body" class="divide-y divide-cyber-700 font-mono text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Password Audit -->
+        <section id="content-audit" class="hidden space-y-6">
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-bold text-cyber-neon mb-4"><i class="fa-solid fa-key mr-2"></i>Auditoria de Credenciais e Força Bruta (Hydra Engine)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Serviço Alvo</label>
+                        <select id="audit-service" class="w-full bg-cyber-900 border border-cyber-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyber-neon">
+                            <option value="ssh">SSH (Port 22)</option>
+                            <option value="ftp">FTP (Port 21)</option>
+                            <option value="http-login">HTTP Form Login (Port 80/443)</option>
+                            <option value="smb">SMB (Port 445)</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-gray-400 mb-1">IP Alvo</label>
+                        <div class="flex space-x-4">
+                            <input type="text" id="audit-ip" value="192.168.1.100" class="flex-1 bg-cyber-900 border border-cyber-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyber-neon">
+                            <button onclick="runPasswordAudit()" class="bg-cyber-accent text-cyber-900 px-6 py-3 rounded-lg font-bold hover:bg-emerald-400 transition flex items-center space-x-2">
+                                <i class="fa-solid fa-play"></i> <span>Auditar Senhas</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="audit-results" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <h3 class="font-bold text-lg text-emerald-400 border-b border-cyber-700 pb-2">Relatório de Auditoria de Força Bruta</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-cyber-900 p-4 rounded-lg">
+                        <p class="text-xs text-gray-400">Tentativas Realizadas</p>
+                        <p id="audit-attempts" class="text-lg font-mono font-bold text-white">1,250</p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg">
+                        <p class="text-xs text-gray-400">Tempo Decorrido</p>
+                        <p id="audit-time" class="text-lg font-mono font-bold text-cyan-300">4.2s</p>
+                    </div>
+                    <div class="bg-cyber-900 p-4 rounded-lg">
+                        <p class="text-xs text-gray-400">Status Geral</p>
+                        <p id="audit-status" class="text-lg font-bold text-red-400">Vulnerável</p>
+                    </div>
+                </div>
+                <div id="audit-creds-container" class="mt-4">
+                    <h4 class="text-sm font-bold text-gray-300 mb-2">Credenciais Fracas Encontradas:</h4>
+                    <div id="audit-creds-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: NIST CSF Compliance -->
+        <section id="content-compliance" class="hidden space-y-6">
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-cyber-neon"><i class="fa-solid fa-clipboard-check mr-2"></i>Conformidade NIST CSF 2.0 (Govern, Identify, Protect, Detect, Respond, Recover)</h2>
+                    <button onclick="loadCompliance()" class="bg-cyber-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-cyber-600 transition"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-cyber-700 text-xs text-gray-300">
+                                <th class="p-3">ID CSF</th>
+                                <th class="p-3">Função</th>
+                                <th class="p-3">Descrição da Diretriz</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="compliance-table-body" class="divide-y divide-cyber-700 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Vulnerability Log -->
+        <section id="content-vulns" class="hidden space-y-6">
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-bold text-cyber-neon mb-4"><i class="fa-solid fa-bug mr-2"></i>Log de Vulnerabilidades & Remediações</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-cyber-700 text-xs text-gray-300">
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Severidade</th>
+                                <th class="p-3">Serviço / Alvo</th>
+                                <th class="p-3">Descrição</th>
+                                <th class="p-3">Remediação Recomendada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vulns-table-body" class="divide-y divide-cyber-700 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 5: Guia para Leigos -->
+        <section id="content-leigos" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="bg-amber-500/20 p-3 rounded-xl">
+                        <i class="fa-solid fa-book-open text-amber-400 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Guia para Leigos</h2>
+                        <p class="text-gray-400">Explicação simples do que cada porta significa e como funcionam ataques</p>
+                    </div>
+                </div>
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                    <p class="text-amber-300 text-sm"><i class="fa-solid fa-lightbulb mr-2"></i><strong>Como usar:</strong> Clique em qualquer porta abaixo para ver se ela está segura ou vulnerável, e como um invasor poderia atacá-la.</p>
+                </div>
+            </div>
+
+            <!-- Portas Interativas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- Porta 21 - FTP -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('ftp')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-folder-open text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 21 - FTP</h3>
+                                <p class="text-xs text-gray-400">Transferência de Arquivos</p>
+                            </div>
+                        </div>
+                        <span id="ftp-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">FTP é como um "correio" para enviar arquivos entre computadores. Se não protegido, qualquer pessoa na rede pode baixar, alterar ou deletar seus arquivos.</p>
+                    <div id="ftp-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 22 - SSH -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('ssh')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-emerald-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-terminal text-emerald-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 22 - SSH</h3>
+                                <p class="text-xs text-gray-400">Acesso Remoto Seguro</p>
+                            </div>
+                        </div>
+                        <span id="ssh-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">SSH é como uma "chave mestra" que permite controlar o computador de longe. Se a senha for fraca, o invasor assume seu servidor inteiro.</p>
+                    <div id="ssh-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 80 - HTTP -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('http')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-orange-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-globe text-orange-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 80 - HTTP</h3>
+                                <p class="text-xs text-gray-400">Site na Web (sem criptografia)</p>
+                            </div>
+                        </div>
+                        <span id="http-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">HTTP é como enviar um cartão postal - qualquer pessoa que interceptar a mensagem pode ler tudo. Senhas, dados pessoais, tudo fica exposto.</p>
+                    <div id="http-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 443 - HTTPS -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('https')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-lock text-green-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 443 - HTTPS</h3>
+                                <p class="text-xs text-gray-400">Site na Web (com criptografia)</p>
+                            </div>
+                        </div>
+                        <span id="https-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">HTTPS é como enviar uma carta dentro de um cofre - mesmo que alguém intercepte, não consegue ler. É o padrão seguro para sites.</p>
+                    <div id="https-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 445 - SMB -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('smb')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-purple-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-network-wired text-purple-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 445 - SMB</h3>
+                                <p class="text-xs text-gray-400">Compartilhamento de Arquivos em Rede</p>
+                            </div>
+                        </div>
+                        <span id="smb-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">SMB é como uma "prateleira compartilhada" na rede. Se vulnerável, o invasor pode colocar vírus, roubar arquivos ou sequestrar o sistema inteiro.</p>
+                    <div id="smb-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 3306 - MySQL -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('mysql')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-cyan-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-database text-cyan-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 3306 - MySQL</h3>
+                                <p class="text-xs text-gray-400">Banco de Dados</p>
+                            </div>
+                        </div>
+                        <span id="mysql-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">MySQL é onde ficam guardados todos os dados: senhas, e-mails, informações de clientes. Se aberto, o invasor pode roubar ou apagar tudo.</p>
+                    <div id="mysql-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 8080 - Proxy -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('proxy')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-pink-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-shield-halved text-pink-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 8080 - Proxy</h3>
+                                <p class="text-xs text-gray-400">Servidor Intermediário</p>
+                            </div>
+                        </div>
+                        <span id="proxy-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">Proxy é como um "porteiro" que controla quem acessa a internet. Se aberto sem autenticação, qualquer pessoa pode usar sua rede para atividades ilegais.</p>
+                    <div id="proxy-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Porta 8443 - HTTPS Admin -->
+                <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-5 shadow-xl hover:border-amber-500/50 transition cursor-pointer" onclick="togglePortDetail('admin')">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-red-500/20 p-2 rounded-lg">
+                                <i class="fa-solid fa-user-shield text-red-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white">Porta 8443 - Admin Panel</h3>
+                                <p class="text-xs text-gray-400">Painel de Administração</p>
+                            </div>
+                        </div>
+                        <span id="admin-status" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-600 text-gray-300">Clique para testar</span>
+                    </div>
+                    <p class="text-sm text-gray-300">Painel admin é como o "escritório do diretor" - quem entra controla tudo. Se a senha for fraca, o invasor vira o dono do sistema.</p>
+                    <div id="admin-detail" class="hidden mt-4 space-y-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Simulação de Ataque -->
+            <div id="attack-simulation" class="hidden bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-cyber-700 pb-3">
+                    <h3 class="font-bold text-lg text-white"><i class="fa-solid fa-skull-crossbones mr-2 text-red-400"></i>Simulação de Ataque</h3>
+                    <button onclick="closeSimulation()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div id="simulation-content" class="space-y-4">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <!-- Simulação de Seguro -->
+            <div id="secure-simulation" class="hidden bg-cyber-800 border border-emerald-700 rounded-xl p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-emerald-700 pb-3">
+                    <h3 class="font-bold text-lg text-white"><i class="fa-solid fa-shield-check mr-2 text-emerald-400"></i>Sistema Protegido</h3>
+                    <button onclick="closeSecureSimulation()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div id="secure-content" class="space-y-4">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Tab 6: Educação WiFi -->
+        <section id="content-wifi-edu" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="bg-cyan-500/20 p-3 rounded-xl">
+                        <i class="fa-solid fa-wifi text-cyan-400 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Educação & Segurança WiFi</h2>
+                        <p class="text-gray-400">Aprenda como funcionam os ataques e como se proteger</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testador de Força de Senha WiFi -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-key mr-2"></i>Teste a Força da Sua Senha WiFi</h3>
+                <p class="text-gray-400 text-sm mb-4">Digite sua senha WiFi atual para verificar se ela é segura. <strong>Não enviamos nada para a internet - tudo é processado localmente.</strong></p>
+                <div class="flex space-x-4 mb-4">
+                    <input type="password" id="wifi-password-test" placeholder="Digite sua senha WiFi..." class="flex-1 bg-cyber-900 border border-cyber-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-400">
+                    <button onclick="testWifiPassword()" class="bg-cyan-500 text-cyber-900 px-6 py-3 rounded-lg font-bold hover:bg-cyan-400 transition">
+                        <i class="fa-solid fa-magnifying-glass mr-2"></i>Testar
+                    </button>
+                </div>
+                <div id="wifi-password-result" class="hidden space-y-3"></div>
+            </div>
+
+            <!-- Tipos de Criptografia WiFi -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-shield mr-2"></i>Tipos de Criptografia WiFi</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- WEP -->
+                    <div class="bg-red-950/30 border border-red-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-red-400">WEP</h4>
+                            <span class="px-2 py-1 bg-red-900 text-red-300 rounded text-xs font-bold">INSEGURO</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Criptografia antiga de 1999. Pode ser quebrada em minutos com ferramentas gratuitas.</p>
+                        <div class="text-xs text-gray-400">
+                            <p><strong>Tempo para quebrar:</strong> 5-10 minutos</p>
+                            <p><strong>Ferramenta:</strong> aircrack-ng</p>
+                            <p><strong>Recomendação:</strong> Desativar imediatamente</p>
+                        </div>
+                        <div class="mt-3 bg-red-900/30 rounded p-2 text-xs text-red-300">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                            <strong>Como funciona o ataque:</strong> O invasor captura pacotes e usa estatística para descobrir a chave. Com 40.000 pacotes, a senha é revelada.
+                        </div>
+                    </div>
+
+                    <!-- WPA -->
+                    <div class="bg-orange-950/30 border border-orange-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-orange-400">WPA (TKIP)</h4>
+                            <span class="px-2 py-1 bg-orange-900 text-orange-300 rounded text-xs font-bold">VULNERÁVEL</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Melhoria do WEP, mas ainda tem falhas conhecidas. Pode ser quebrado com ataques de dicionário.</p>
+                        <div class="text-xs text-gray-400">
+                            <p><strong>Tempo para quebrar:</strong> Horas a dias (depende da senha)</p>
+                            <p><strong>Ferramenta:</strong> aircrack-ng + hashcat</p>
+                            <p><strong>Recomendação:</strong> Atualizar para WPA2</p>
+                        </div>
+                        <div class="mt-3 bg-orange-900/30 rounded p-2 text-xs text-orange-300">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                            <strong>Como funciona o ataque:</strong> O invasor captura o "handshake" (aperto de mão) e testa senhas de um dicionário offline. Se a senha for fraca, é descoberta.
+                        </div>
+                    </div>
+
+                    <!-- WPA2 -->
+                    <div class="bg-amber-950/30 border border-amber-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-amber-400">WPA2 (AES)</h4>
+                            <span class="px-2 py-1 bg-amber-900 text-amber-300 rounded text-xs font-bold">SEGURO*</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Padrão atual. Seguro se a senha for forte (12+ caracteres). Vulnerável a ataques de dicionário se senha for fraca.</p>
+                        <div class="text-xs text-gray-400">
+                            <p><strong>Tempo para quebrar:</strong> Anos (com senha forte)</p>
+                            <p><strong>Ferramenta:</strong> aircrack-ng + GPU potente</p>
+                            <p><strong>Recomendação:</strong> Usar senha com 16+ caracteres</p>
+                        </div>
+                        <div class="mt-3 bg-amber-900/30 rounded p-2 text-xs text-amber-300">
+                            <i class="fa-solid fa-info-circle mr-1"></i>
+                            <strong>Vulnerabilidade KRACK (2017):</strong> Falha no protocolo permitia interceptação. Corrigido em atualizações. Mantenha seus dispositivos atualizados.
+                        </div>
+                    </div>
+
+                    <!-- WPA3 -->
+                    <div class="bg-emerald-950/30 border border-emerald-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-emerald-400">WPA3 (SAE)</h4>
+                            <span class="px-2 py-1 bg-emerald-900 text-emerald-300 rounded text-xs font-bold">MUITO SEGURO</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Mais recente e seguro. Protegido contra ataques de dicionário mesmo com senha fraca.</p>
+                        <div class="text-xs text-gray-400">
+                            <p><strong>Tempo para quebrar:</strong> Praticamente impossível</p>
+                            <p><strong>Ferramenta:</strong> Nenhuma conhecida</p>
+                            <p><strong>Recomendação:</strong> Usar sempre que possível</p>
+                        </div>
+                        <div class="mt-3 bg-emerald-900/30 rounded p-2 text-xs text-emerald-300">
+                            <i class="fa-solid fa-check-circle mr-1"></i>
+                            <strong>Vantagens:</strong> Proteção contra Dragonblood, handshake seguro mesmo com senha fraca, criptografia mais forte.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Como Funciona um Ataque WiFi -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-skull-crossbones mr-2"></i>Como Funciona um Ataque WiFi (Educação)</h3>
+                <div class="space-y-4">
+                    <div class="flex items-start space-x-4 bg-red-950/20 border border-red-800/30 rounded-lg p-4">
+                        <div class="bg-red-500/20 p-2 rounded-lg flex-shrink-0">
+                            <span class="text-red-400 font-bold text-lg">1</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white">Captura de Tráfego</h4>
+                            <p class="text-gray-300 text-sm">O invasor coloca o adaptador WiFi em "modo monitor" para capturar todos os pacotes de rede. Ele não precisa estar conectado à rede - só precisa estar no alcance do sinal.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4 bg-red-950/20 border border-red-800/30 rounded-lg p-4">
+                        <div class="bg-red-500/20 p-2 rounded-lg flex-shrink-0">
+                            <span class="text-red-400 font-bold text-lg">2</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white">Interceptação do Handshake</h4>
+                            <p class="text-gray-300 text-sm">Quando um dispositivo se conecta à rede, ele troca dados com o roteador (handshake). O invasor captura esse momento para obter a "prova" de que tem a senha.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4 bg-red-950/20 border border-red-800/30 rounded-lg p-4">
+                        <div class="bg-red-500/20 p-2 rounded-lg flex-shrink-0">
+                            <span class="text-red-400 font-bold text-lg">3</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white">Ataque de Dicionário</h4>
+                            <p class="text-gray-300 text-sm">Com o handshake capturado, o invasor testa milhares de senhas de um dicionário (rockyou.txt tem 14 milhões de senhas). Se a sua senha estiver na lista, é descoberta.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4 bg-red-950/20 border border-red-800/30 rounded-lg p-4">
+                        <div class="bg-red-500/20 p-2 rounded-lg flex-shrink-0">
+                            <span class="text-red-400 font-bold text-lg">4</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white">Resultado</h4>
+                            <p class="text-gray-300 text-sm">Se a senha for fraca, o invasor a descobre em minutos/horas. Pode então acessar sua rede, roubar dados, usar sua internet para atividades ilegais, ou instalar malware.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Como Criar Senhas Fortes -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-lightbulb mr-2"></i>Como Criar Senhas WiFi Fortes</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-emerald-950/30 border border-emerald-800 rounded-lg p-4">
+                        <h4 class="font-bold text-emerald-400 mb-2"><i class="fa-solid fa-check-circle mr-2"></i>FAÇA ISSO:</h4>
+                        <ul class="space-y-2 text-sm text-gray-300">
+                            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Use 16+ caracteres</li>
+                            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Misture letras, números e símbolos</li>
+                            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Use frases de memória (ex: "MeuCarro2024&Tem4Pneus!")</li>
+                            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Use gerenciador de senhas (Bitwarden, KeePass)</li>
+                            <li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>Troque a senha a cada 6 meses</li>
+                        </ul>
+                    </div>
+                    <div class="bg-red-950/30 border border-red-800 rounded-lg p-4">
+                        <h4 class="font-bold text-red-400 mb-2"><i class="fa-solid fa-times-circle mr-2"></i>NÃO FAÇA ISSO:</h4>
+                        <ul class="space-y-2 text-sm text-gray-300">
+                            <li><i class="fa-solid fa-times text-red-400 mr-2"></i>Use senhas como "12345678" ou "senha123"</li>
+                            <li><i class="fa-solid fa-times text-red-400 mr-2"></i>Use dados pessoais (nome, nascimento, placa)</li>
+                            <li><i class="fa-solid fa-times text-red-400 mr-2"></i>Use a mesma senha em vários lugares</li>
+                            <li><i class="fa-solid fa-times text-red-400 mr-2"></i>Use senhas curtas (menos de 12 caracteres)</li>
+                            <li><i class="fa-solid fa-times text-red-400 mr-2"></i>Anote em post-its ou papel</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gerador de Senhas Fortes -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Gerador de Senhas Fortes</h3>
+                <p class="text-gray-400 text-sm mb-4">Gere senhas aleatórias seguras para sua WiFi. <strong>Tudo processado localmente - nada é enviado para a internet.</strong></p>
+                <div class="flex space-x-4 mb-4">
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-400 mb-1">Comprimento</label>
+                        <input type="number" id="password-length" value="20" min="8" max="64" class="w-full bg-cyber-900 border border-cyber-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-400 mb-1">Opções</label>
+                        <div class="flex space-x-2">
+                            <label class="flex items-center space-x-1 text-sm text-gray-300">
+                                <input type="checkbox" id="pwd-upper" checked class="rounded"> <span>A-Z</span>
+                            </label>
+                            <label class="flex items-center space-x-1 text-sm text-gray-300">
+                                <input type="checkbox" id="pwd-lower" checked class="rounded"> <span>a-z</span>
+                            </label>
+                            <label class="flex items-center space-x-1 text-sm text-gray-300">
+                                <input type="checkbox" id="pwd-numbers" checked class="rounded"> <span>0-9</span>
+                            </label>
+                            <label class="flex items-center space-x-1 text-sm text-gray-300">
+                                <input type="checkbox" id="pwd-symbols" checked class="rounded"> <span>!@#</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button onclick="generatePassword()" class="bg-cyan-500 text-cyber-900 px-6 py-3 rounded-lg font-bold hover:bg-cyan-400 transition">
+                        <i class="fa-solid fa-rotate mr-2"></i>Gerar
+                    </button>
+                </div>
+                <div id="generated-password" class="hidden bg-cyber-900 border border-cyan-500 rounded-lg p-4">
+                    <p class="text-xs text-gray-400 mb-1">Senha Gerada:</p>
+                    <p id="generated-pwd-text" class="text-cyan-400 font-mono text-lg font-bold break-all"></p>
+                    <button onclick="copyPassword()" class="mt-2 text-xs text-gray-400 hover:text-white"><i class="fa-solid fa-copy mr-1"></i>Copiar</button>
+                </div>
+            </div>
+
+            <!-- Checklist de Segurança WiFi -->
+            <div class="bg-cyber-800 border border-cyber-700 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-cyan-400 mb-4"><i class="fa-solid fa-clipboard-check mr-2"></i>Checklist de Segurança WiFi</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Usa WPA2 ou WPA3 (não WEP ou WPA1)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Senha com 16+ caracteres (letras, números, símbolos)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Nome da rede (SSID) não revela informações pessoais</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">WPS desativado (vulnerável a ataques de PIN)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Firmware do roteador atualizado</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Admin do roteador com senha forte (não "admin")</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">SSID oculto (não transmitir nome da rede)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 bg-cyber-900 p-3 rounded-lg cursor-pointer hover:bg-cyber-700 transition">
+                        <input type="checkbox" class="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400">
+                        <span class="text-gray-300">Filtragem MAC ativada (apenas dispositivos autorizados)</span>
+                    </label>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-cyber-800 border-t border-cyber-700 text-center py-4 text-xs text-gray-400 mt-auto">
+        NetSec Guard OS &bull; Segurança de Redes & Pentest Management &bull; Custo Zero & Alto Desempenho
+    </footer>
+
+    <script>
+        function switchTab(tab) {
+            ['scanner', 'audit', 'compliance', 'vulns', 'leigos', 'wifi-edu'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = 'px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white transition flex items-center space-x-2';
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = 'px-4 py-2 rounded-lg font-semibold bg-cyber-700 text-cyber-neon transition flex items-center space-x-2';
+
+            if (tab === 'compliance') loadCompliance();
+            if (tab === 'vulns') loadVulnerabilities();
+            if (tab === 'leigos') loadPortStatuses();
+        }
+
+        async function runScan() {
+            const target = document.getElementById('scan-target').value;
+            const resContainer = document.getElementById('scan-results');
+            resContainer.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ target })
+                });
+                const data = await response.json();
+                
+                document.getElementById('scan-time').innerText = data.scan_time;
+                document.getElementById('res-target').innerText = data.target;
+                document.getElementById('res-os').innerText = data.os_detected;
+                document.getElementById('res-risk').innerText = data.risk_score;
+
+                let tbody = document.getElementById('ports-table-body');
+                tbody.innerHTML = '';
+                data.open_ports.forEach(p => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-cyber-700/50">
+                            <td class="p-3 text-cyan-400 font-bold">${p.port}</td>
+                            <td class="p-3 text-uppercase font-bold">${p.service}</td>
+                            <td class="p-3 text-emerald-400">${p.state}</td>
+                            <td class="p-3 text-gray-300">${p.banner}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                alert('Erro ao executar o escaneamento.');
+            }
+        }
+
+        async function runPasswordAudit() {
+            const service = document.getElementById('audit-service').value;
+            const target_ip = document.getElementById('audit-ip').value;
+            const resContainer = document.getElementById('audit-results');
+            resContainer.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/password-audit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ service, target_ip })
+                });
+                const data = await response.json();
+
+                document.getElementById('audit-attempts').innerText = data.attempts;
+                document.getElementById('audit-time').innerText = data.time_elapsed;
+                document.getElementById('audit-status').innerText = data.result;
+
+                let credsList = document.getElementById('audit-creds-list');
+                credsList.innerHTML = '';
+                if (data.credentials.length > 0) {
+                    data.credentials.forEach(c => {
+                        credsList.innerHTML += `
+                            <div class="bg-red-950/50 border border-red-800 p-3 rounded-lg flex justify-between items-center">
+                                <span class="font-mono">User: <strong class="text-white">${c.username}</strong> | Pass: <strong class="text-white">${c.password}</strong></span>
+                                <span class="text-xs px-2 py-1 bg-red-800 text-white rounded font-bold">${c.status}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    credsList.innerHTML = '<p class="text-emerald-400 text-sm">Nenhuma credencial fraca encontrada.</p>';
+                }
+            } catch (err) {
+                alert('Erro na auditoria de senhas.');
+            }
+        }
+
+        async function loadCompliance() {
+            try {
+                const response = await fetch('/api/compliance');
+                const data = await response.json();
+                let tbody = document.getElementById('compliance-table-body');
+                tbody.innerHTML = '';
+                data.forEach(item => {
+                    let badgeColor = item.status === 'Conforme' ? 'bg-emerald-900 text-emerald-300 border-emerald-700' : (item.status === 'Parcial' ? 'bg-amber-900 text-amber-300 border-amber-700' : 'bg-red-900 text-red-300 border-red-700');
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-cyber-700/50">
+                            <td class="p-3 font-mono font-bold text-cyan-400">${item.id}</td>
+                            <td class="p-3 font-semibold text-white">${item.function}</td>
+                            <td class="p-3 text-gray-300">${item.description}</td>
+                            <td class="p-3"><span class="px-3 py-1 rounded-full text-xs font-bold border ${badgeColor}">${item.status}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadVulnerabilities() {
+            try {
+                const response = await fetch('/api/vulnerabilities');
+                const data = await response.json();
+                let tbody = document.getElementById('vulns-table-body');
+                tbody.innerHTML = '';
+                data.forEach(v => {
+                    let sevColor = v.severity === 'Crítica' ? 'text-red-400' : (v.severity === 'Alta' ? 'text-orange-400' : 'text-amber-300');
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-cyber-700/50">
+                            <td class="p-3 font-mono font-bold text-cyan-400">${v.id}</td>
+                            <td class="p-3 font-bold ${sevColor}">${v.severity}</td>
+                            <td class="p-3 font-mono text-gray-200">${v.service}</td>
+                            <td class="p-3 text-gray-300">${v.description}</td>
+                            <td class="p-3 text-emerald-400 text-xs">${v.remediation}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Load initial compliance data on startup
+        loadCompliance();
+        loadVulnerabilities();
+
+        // ========== FUNÇÕES DA ABA LEIGOS ==========
+
+        const portData = {
+            ftp: {
+                name: 'FTP (Porta 21)',
+                icon: 'fa-folder-open',
+                color: 'blue',
+                simple: 'Imagine que você tem uma estante de arquivos na sua sala, mas a porta da sala está aberta e qualquer pessoa pode entrar, pegar, copiar ou apagar seus arquivos.',
+                vulnerable: {
+                    title: 'ATAQUE: Invasor acessando seus arquivos',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'O invasor escaneia a rede e encontra o FTP aberto na porta 21' },
+                        { icon: 'fa-magnifying-glass', text: 'Ele usa um programa que tenta senhas comuns: admin, 123456, senha, etc.' },
+                        { icon: 'fa-key', text: 'Encontra a senha "admin123" e entra no sistema' },
+                        { icon: 'fa-download', text: 'Baixa todos os arquivos sensíveis: dados de clientes, senhas, documentos' },
+                        { icon: 'fa-virus', text: 'Insere vírus ou trojans nos arquivos para infectar outros computadores' },
+                        { icon: 'fa-skull', text: 'Resultado: Vazamento de dados, roubo de identidade, prejuízo financeiro' }
+                    ],
+                    solution: 'Desative o FTP e use SFTP (porta 22) que criptografa tudo. Nunca use senhas fracas.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: FTP Desativado ou Protegido',
+                    description: 'Quando o FTP está desativado ou usando SFTP com criptografia, o invasor não consegue:',
+                    points: [
+                        { icon: 'fa-lock', text: 'Não pode ler os arquivos (estão criptografados)' },
+                        { icon: 'fa-ban', text: 'Não pode copiar dados (bloqueado)' },
+                        { icon: 'fa-shield', text: 'Não pode inserir vírus (integridade verificada)' },
+                        { icon: 'fa-check-circle', text: 'Sistema seguro contra ataques de interceptação' }
+                    ]
+                }
+            },
+            ssh: {
+                name: 'SSH (Porta 22)',
+                icon: 'fa-terminal',
+                color: 'emerald',
+                simple: 'SSH é como ter uma chave mestra que abre todas as portas do seu computador. Se alguém roubar essa chave, ele vira o dono do sistema.',
+                vulnerable: {
+                    title: 'ATAQUE: Invasor assumindo controle total',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'O invasor encontra o SSH aberto e tenta senhas comuns (Hydra)' },
+                        { icon: 'fa-brain', text: 'Usa dicionários com milhões de senhas para testar' },
+                        { icon: 'fa-key', text: 'Encontra "password123" no usuario root' },
+                        { icon: 'fa-terminal', text: 'Acessa o terminal remoto - agora controla o servidor inteiro' },
+                        { icon: 'fa-user-secret', text: 'Cria backdoor para manter acesso permanente' },
+                        { icon: 'fa-skull', text: 'Resultado: Controle total do servidor, roubo de dados, uso para ataques a outros' }
+                    ],
+                    solution: 'Use chaves SSH (não senhas), desative login como root, use fail2ban para bloquear tentativas.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: SSH com Chaves Criptográficas',
+                    description: 'Quando o SSH usa autenticação por chave (não senha) e está configurado corretamente:',
+                    points: [
+                        { icon: 'fa-key', text: 'Invasor não pode usar senhas (autenticação por chave)' },
+                        { icon: 'fa-lock', text: 'Mesmo interceptando, não consegue decifrar (criptografia forte)' },
+                        { icon: 'fa-ban', text: 'Root login desativado (não pode assumir controle total)' },
+                        { icon: 'fa-shield', text: 'fail2ban bloqueia após 3 tentativas (anti暴力破解)' }
+                    ]
+                }
+            },
+            http: {
+                name: 'HTTP (Porta 80)',
+                icon: 'fa-globe',
+                color: 'orange',
+                simple: 'HTTP é como enviar um cartão postal pelo correio - o carteiro, o vizinho, qualquer pessoa que pegar pode ler tudo que está escrito.',
+                vulnerable: {
+                    title: 'ATAQUE: Interceptação de dados (Man-in-the-Middle)',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'O invasor está na mesma rede Wi-Fi (café, aeroporto, empresa)' },
+                        { icon: 'fa-wifi', text: 'Intercepta o tráfego entre você e o site HTTP' },
+                        { icon: 'fa-eye', text: 'Lê tudo: senhas, números de cartão, mensagens, e-mails' },
+                        { icon: 'fa-pen', text: 'Pode alterar os dados no meio do caminho (injetar vírus)' },
+                        { icon: 'fa-id-card', text: 'Rouba identidade, dados financeiros, informações pessoais' },
+                        { icon: 'fa-skull', text: 'Resultado: Roubo de dados, fraude financeira, chantagem' }
+                    ],
+                    solution: 'Use sempre HTTPS (porta 443). Configure redirecionamento automático HTTP → HTTPS.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: Redirecionamento para HTTPS',
+                    description: 'Quando o site redireciona automaticamente para HTTPS e usa TLS 1.3:',
+                    points: [
+                        { icon: 'fa-lock', text: 'Dados criptografados (não pode ler)' },
+                        { icon: 'fa-check-double', text: 'Certificado válido (comprovado que é o site real)' },
+                        { icon: 'fa-ban', text: 'Não pode alterar dados (assinatura digital)' },
+                        { icon: 'fa-shield', text: 'Protegido contra interceptação e manipulação' }
+                    ]
+                }
+            },
+            https: {
+                name: 'HTTPS (Porta 443)',
+                icon: 'fa-lock',
+                color: 'green',
+                simple: 'HTTPS é como enviar uma carta dentro de um cofre trancado - mesmo que alguém intercepte, não consegue abrir para ler.',
+                vulnerable: {
+                    title: 'VULNERABILIDADE: Certificado SSL inválido ou desatualizado',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'Invasor cria site falso com certificado gratuito (Let\'s Encrypt)' },
+                        { icon: 'fa-mask', text: 'Engana o usuário para acessar o site falso (phishing)' },
+                        { icon: 'fa-eye', text: 'Usuário digita senhas e dados pensando que é o site real' },
+                        { icon: 'fa-key', text: 'Invasor captura as credenciais' },
+                        { icon: 'fa-skull', text: 'Resultado: Roubo de credenciais mesmo com HTTPS' }
+                    ],
+                    solution: 'Use HSTS (force HTTPS), monitore certificados, use MFA (autenticação em 2 fatores).'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: HTTPS com TLS 1.3 e HSTS',
+                    description: 'Quando o HTTPS está configurado com as melhores práticas:',
+                    points: [
+                        { icon: 'fa-lock', text: 'TLS 1.3 (versão mais segura e rápida)' },
+                        { icon: 'fa-certificate', text: 'Certificado válido e atualizado' },
+                        { icon: 'fa-bolt', text: 'HSTS ativo (força HTTPS em todas as conexões)' },
+                        { icon: 'fa-shield', text: 'Protegido contra phishing, MITM e downgrade attacks' }
+                    ]
+                }
+            },
+            smb: {
+                name: 'SMB (Porta 445)',
+                icon: 'fa-network-wired',
+                color: 'purple',
+                simple: 'SMB é como ter uma prateleira compartilhada na sala da empresa - se estiver aberta, qualquer pessoa pode colocar, pegar ou trocar os arquivos.',
+                vulnerable: {
+                    title: 'ATAQUE: WannaCry / Ransomware via SMB',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'Invasor encontra SMBv1 ativo (protocolo antigo e vulnerável)' },
+                        { icon: 'fa-bug', text: 'Explora a falha EternalBlue (mesma do WannaCry)' },
+                        { icon: 'fa-virus', text: 'Instala ransomware que criptografa todos os arquivos' },
+                        { icon: 'fa-lock', text: 'Exige resgate em Bitcoin para liberar os arquivos' },
+                        { icon: 'fa-network-wired', text: 'Se espalha automaticamente para outros computadores da rede' },
+                        { icon: 'fa-skull', text: 'Resultado: Perda total de dados, prejuízo de milhões, negócios parados' }
+                    ],
+                    solution: 'Desative SMBv1, atualize o sistema, use firewalls para bloquear a porta 445 externamente.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: SMBv3 com Assinatura Obligatória',
+                    description: 'Quando o SMB está configurado com versão segura:',
+                    points: [
+                        { icon: 'fa-check-double', text: 'SMBv3 com assinatura obrigatória (não pode ser adulterado)' },
+                        { icon: 'fa-ban', text: 'SMBv1 desativado (protegido contra EternalBlue)' },
+                        { icon: 'fa-shield', text: 'Firewall bloqueia acesso externo à porta 445' },
+                        { icon: 'fa-lock', text: 'Criptografia de dados em trânsito' }
+                    ]
+                }
+            },
+            mysql: {
+                name: 'MySQL (Porta 3306)',
+                icon: 'fa-database',
+                color: 'cyan',
+                simple: 'MySQL é como o cofre da empresa onde estão todos os dados: senhas, clientes, finanças. Se estiver aberto, o ladrão leva tudo.',
+                vulnerable: {
+                    title: 'ATAQUE: Roubo de banco de dados completo',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'Invasor encontra MySQL aberto na porta 3306' },
+                        { icon: 'fa-key', text: 'Tenta senhas padrão: root/vazio, root/mysql, admin/123456' },
+                        { icon: 'fa-database', text: 'Entra no banco e lista todos os bancos de dados' },
+                        { icon: 'fa-download', text: 'Baixa tabelas inteiras: dados de clientes, senhas hashes, cartões' },
+                        { icon: 'fa-trash', text: 'Apaga ou altera dados (extorsão, manipulação)' },
+                        { icon: 'fa-skull', text: 'Resultado: Vazamento massivo de dados, multa da LGPD, ação judicial' }
+                    ],
+                    solution: 'Desative acesso remoto ao MySQL, use tunelamento SSH, senhas fortes, permissões mínimas.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: MySQL com Acesso Restrito',
+                    description: 'Quando o MySQL está configurado corretamente:',
+                    points: [
+                        { icon: 'fa-ban', text: 'Acesso remoto desativado (só localhost)' },
+                        { icon: 'fa-key', text: 'Senhas fortes e criptografadas' },
+                        { icon: 'fa-user-lock', text: 'Permissões mínimas por usuário (princípio do menor privilégio)' },
+                        { icon: 'fa-shield', text: 'Tunelamento SSH para acesso externo (criptografado)' }
+                    ]
+                }
+            },
+            proxy: {
+                name: 'Proxy (Porta 8080)',
+                icon: 'fa-shield-halved',
+                color: 'pink',
+                simple: 'Proxy é como o porteiro do prédio - controla quem entra e sai. Se estiver sem autenticação, qualquer pessoa pode usar sua rede.',
+                vulnerable: {
+                    title: 'ATAQUE: Uso da rede para atividades ilegais',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'Invasor encontra proxy aberto na porta 8080' },
+                        { icon: 'fa-wifi', text: 'Configura o computador dele para usar seu proxy' },
+                        { icon: 'fa-mask', text: 'Navega pela internet usando SEU endereço IP' },
+                        { icon: 'fa-gavel', text: 'Realiza atividades ilegais: ataques, download ilegal, fraudes' },
+                        { icon: 'fa-exclamation-triangle', text: 'Investigação chega até VOCÊ (o IP é o seu)' },
+                        { icon: 'fa-skull', text: 'Resultado: Responsabilização legal, multa, processos judiciais' }
+                    ],
+                    solution: 'Configure autenticação no proxy, limite IPs de acesso, monitore logs de uso.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: Proxy com Autenticação',
+                    description: 'Quando o proxy está configurado com segurança:',
+                    points: [
+                        { icon: 'fa-key', text: 'Autenticação obrigatória (usuário e senha)' },
+                        { icon: 'fa-ban', text: 'Apenas IPs autorizados podem acessar' },
+                        { icon: 'fa-list', text: 'Logs de todas as conexões (rastreabilidade)' },
+                        { icon: 'fa-shield', text: 'Filtros de conteúdo bloqueando acesso a sites perigosos' }
+                    ]
+                }
+            },
+            admin: {
+                name: 'Admin Panel (Porta 8443)',
+                icon: 'fa-user-shield',
+                color: 'red',
+                simple: 'Painel admin é como o escritório do CEO - quem entra lá manda em tudo. Se a senha for "admin123", o invasor vira o dono da empresa.',
+                vulnerable: {
+                    title: 'ATAQUE: Takeover completo do sistema',
+                    steps: [
+                        { icon: 'fa-user-secret', text: 'Invasor encontra painel admin na porta 8443' },
+                        { icon: 'fa-magnifying-glass', text: 'Tenta senhas comuns: admin/admin, admin/123456, root/toor' },
+                        { icon: 'fa-key', text: 'Entra no painel de administração' },
+                        { icon: 'fa-cog', text: 'Muda configurações, cria novos usuários, acessa todos os dados' },
+                        { icon: 'fa-database', text: 'Baixa todos os dados do sistema' },
+                        { icon: 'fa-skull', text: 'Resultado: Controle total, roubo de dados, destruição do sistema' }
+                    ],
+                    solution: 'Use senhas fortes + MFA, limite acesso por IP, use VPN para acesso admin.'
+                },
+                secure: {
+                    title: 'SISTEMA SEGURO: Painel com MFA e VPN',
+                    description: 'Quando o painel admin está protegido adequadamente:',
+                    points: [
+                        { icon: 'fa-key', text: 'Autenticação em 2 fatores (MFA) obrigatória' },
+                        { icon: 'fa-vpn', text: 'Acesso apenas via VPN (rede privada virtual)' },
+                        { icon: 'fa-ban', text: 'IPs autorizados apenas (whitelist)' },
+                        { icon: 'fa-shield', text: 'Rate limiting (bloqueia após tentativas falhas)' }
+                    ]
+                }
+            }
+        };
+
+        async function loadPortStatuses() {
+            // Scanneia localhost para ver quais portas estão abertas
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ target: '127.0.0.1' })
+                });
+                const data = await response.json();
+                
+                const openPortNumbers = data.open_ports.map(p => p.port);
+                
+                // Atualiza status de cada porta
+                Object.keys(portData).forEach(portKey => {
+                    const portMap = { ftp: 21, ssh: 22, http: 80, https: 443, smb: 445, mysql: 3306, proxy: 8080, admin: 8443 };
+                    const portNum = portMap[portKey];
+                    const statusEl = document.getElementById(`${portKey}-status`);
+                    
+                    if (openPortNumbers.includes(portNum)) {
+                        statusEl.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-300 border border-red-700';
+                        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Aberto (Vulnerável)';
+                    } else {
+                        statusEl.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-900 text-emerald-300 border border-emerald-700';
+                        statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i>Fechado (Seguro)';
+                    }
+                });
+            } catch (err) {
+                console.error('Erro ao verificar portas:', err);
+            }
+        }
+
+        function togglePortDetail(portKey) {
+            const detailEl = document.getElementById(`${portKey}-detail`);
+            const isHidden = detailEl.classList.contains('hidden');
+            
+            // Fecha todos os outros
+            Object.keys(portData).forEach(k => {
+                document.getElementById(`${k}-detail`).classList.add('hidden');
+            });
+            
+            if (isHidden) {
+                detailEl.classList.remove('hidden');
+                const port = portData[portKey];
+                const statusEl = document.getElementById(`${portKey}-status`);
+                const isOpen = statusEl.textContent.includes('Aberto');
+                
+                if (isOpen) {
+                    showAttackSimulation(portKey);
+                } else {
+                    showSecureSimulation(portKey);
+                }
+            } else {
+                document.getElementById('attack-simulation').classList.add('hidden');
+                document.getElementById('secure-simulation').classList.add('hidden');
+            }
+        }
+
+        function showAttackSimulation(portKey) {
+            const port = portData[portKey];
+            const simEl = document.getElementById('attack-simulation');
+            const contentEl = document.getElementById('simulation-content');
+            const secureEl = document.getElementById('secure-simulation');
+            secureEl.classList.add('hidden');
+            
+            let stepsHtml = port.vulnerable.steps.map((step, i) => `
+                <div class="flex items-start space-x-4 bg-red-950/30 border border-red-800/50 rounded-lg p-4">
+                    <div class="bg-red-500/20 p-2 rounded-lg flex-shrink-0">
+                        <i class="fa-solid ${step.icon} text-red-400"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-red-400 font-bold">PASSO ${i + 1}</span>
+                        <p class="text-white text-sm">${step.text}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            contentEl.innerHTML = `
+                <div class="bg-red-950/50 border border-red-700 rounded-lg p-4">
+                    <h4 class="font-bold text-red-400 text-lg mb-2"><i class="fa-solid fa-skull-crossbones mr-2"></i>${port.vulnerable.title}</h4>
+                    <p class="text-gray-300 text-sm mb-4">${port.simple}</p>
+                </div>
+                <div class="space-y-3">
+                    <h5 class="font-bold text-white"><i class="fa-solid fa-list-ol mr-2 text-red-400"></i>Sequência do Ataque:</h5>
+                    ${stepsHtml}
+                </div>
+                <div class="bg-emerald-950/50 border border-emerald-700 rounded-lg p-4">
+                    <h5 class="font-bold text-emerald-400 mb-2"><i class="fa-solid fa-lightbulb mr-2"></i>Como se Proteger:</h5>
+                    <p class="text-gray-300 text-sm">${port.vulnerable.solution}</p>
+                </div>
+            `;
+            
+            simEl.classList.remove('hidden');
+            simEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showSecureSimulation(portKey) {
+            const port = portData[portKey];
+            const secureEl = document.getElementById('secure-simulation');
+            const contentEl = document.getElementById('secure-content');
+            const simEl = document.getElementById('attack-simulation');
+            simEl.classList.add('hidden');
+            
+            let pointsHtml = port.secure.points.map(point => `
+                <div class="flex items-center space-x-4 bg-emerald-950/30 border border-emerald-800/50 rounded-lg p-4">
+                    <div class="bg-emerald-500/20 p-2 rounded-lg flex-shrink-0">
+                        <i class="fa-solid ${point.icon} text-emerald-400"></i>
+                    </div>
+                    <p class="text-white text-sm">${point.text}</p>
+                </div>
+            `).join('');
+            
+            contentEl.innerHTML = `
+                <div class="bg-emerald-950/50 border border-emerald-700 rounded-lg p-4">
+                    <h4 class="font-bold text-emerald-400 text-lg mb-2"><i class="fa-solid fa-shield-check mr-2"></i>${port.secure.title}</h4>
+                    <p class="text-gray-300 text-sm mb-2">${port.simple}</p>
+                    <p class="text-emerald-300 text-sm">${port.secure.description}</p>
+                </div>
+                <div class="space-y-3">
+                    <h5 class="font-bold text-white"><i class="fa-solid fa-check-double mr-2 text-emerald-400"></i>Proteções Ativas:</h5>
+                    ${pointsHtml}
+                </div>
+                <div class="bg-emerald-900/30 border border-emerald-600 rounded-lg p-4 text-center">
+                    <i class="fa-solid fa-check-circle text-emerald-400 text-3xl mb-2"></i>
+                    <p class="text-emerald-300 font-bold text-lg">SISTEMA SEGURO</p>
+                    <p class="text-gray-400 text-sm">Nenhuma vulnerabilidade encontrada nesta porta</p>
+                </div>
+            `;
+            
+            secureEl.classList.remove('hidden');
+            secureEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closeSimulation() {
+            document.getElementById('attack-simulation').classList.add('hidden');
+        }
+
+        function closeSecureSimulation() {
+            document.getElementById('secure-simulation').classList.add('hidden');
+        }
+
+        // ========== FUNÇÕES DA ABA EDUCAÇÃO WiFi ==========
+
+        function testWifiPassword() {
+            const password = document.getElementById('wifi-password-test').value;
+            if (!password) {
+                alert('Digite uma senha para testar.');
+                return;
+            }
+
+            const resultEl = document.getElementById('wifi-password-result');
+            resultEl.classList.remove('hidden');
+
+            let score = 0;
+            let feedback = [];
+            let timeToCrack = '';
+
+            // Comprimento
+            if (password.length < 8) {
+                feedback.push({ type: 'danger', text: 'Senha muito curta (menos de 8 caracteres)' });
+                score -= 2;
+            } else if (password.length < 12) {
+                feedback.push({ type: 'warning', text: 'Senha curta (8-11 caracteres) - recomenda-se 12+' });
+                score -= 1;
+            } else if (password.length < 16) {
+                feedback.push({ type: 'info', text: 'Bom comprimento (12-15 caracteres)' });
+                score += 1;
+            } else {
+                feedback.push({ type: 'success', text: 'Excelente comprimento (16+ caracteres)' });
+                score += 2;
+            }
+
+            // Complexidade
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumbers = /[0-9]/.test(password);
+            const hasSymbols = /[^A-Za-z0-9]/.test(password);
+
+            if (!hasUpper) feedback.push({ type: 'warning', text: 'Faltam letras maiúsculas (A-Z)' });
+            else score += 1;
+
+            if (!hasLower) feedback.push({ type: 'warning', text: 'Faltam letras minúsculas (a-z)' });
+            else score += 1;
+
+            if (!hasNumbers) feedback.push({ type: 'warning', text: 'Faltam números (0-9)' });
+            else score += 1;
+
+            if (!hasSymbols) feedback.push({ type: 'warning', text: 'Faltam símbolos (!@#$%...)' });
+            else score += 1;
+
+            // Senhas fracas conhecidas
+            const weakPasswords = ['123456', 'password', 'senha', 'admin', 'qwerty', 'letmein', 'welcome', 'monkey', 'dragon', 'master'];
+            if (weakPasswords.some(weak => password.toLowerCase().includes(weak))) {
+                feedback.unshift({ type: 'danger', text: 'ATENÇÃO: Senha contém termos comuns!' });
+                score -= 3;
+            }
+
+            // Padrões fracos
+            if (/^(.)\1+$/.test(password)) {
+                feedback.unshift({ type: 'danger', text: 'ATENÇÃO: Senha usa apenas um caractere repetido!' });
+                score -= 3;
+            }
+
+            if (/^(012|123|234|345|456|567|678|789|890)+/.test(password)) {
+                feedback.unshift({ type: 'danger', text: 'ATENÇÃO: Senha usa sequência numérica!' });
+                score -= 2;
+            }
+
+            // Tempo estimado para quebrar
+            const charsetSize = (hasUpper ? 26 : 0) + (hasLower ? 26 : 0) + (hasNumbers ? 10 : 0) + (hasSymbols ? 32 : 0);
+            const combinations = Math.pow(charsetSize || 1, password.length);
+            const guessesPerSecond = 1000000000; // 1 bilhão de tentativas/segundo (GPU moderna)
+            const seconds = combinations / guessesPerSecond / 2;
+
+            if (seconds < 1) timeToCrack = 'Menos de 1 segundo';
+            else if (seconds < 60) timeToCrack = `${Math.round(seconds)} segundos`;
+            else if (seconds < 3600) timeToCrack = `${Math.round(seconds / 60)} minutos`;
+            else if (seconds < 86400) timeToCrack = `${Math.round(seconds / 3600)} horas`;
+            else if (seconds < 31536000) timeToCrack = `${Math.round(seconds / 86400)} dias`;
+            else if (seconds < 31536000 * 1000) timeToCrack = `${Math.round(seconds / 31536000)} anos`;
+            else timeToCrack = 'Séculos ou mais (praticamente impossível)';
+
+            // Classificação
+            let classification = '';
+            let classificationColor = '';
+            if (score <= 0) {
+                classification = 'MUITO FRACA';
+                classificationColor = 'text-red-400 bg-red-900';
+            } else if (score <= 2) {
+                classification = 'FRACA';
+                classificationColor = 'text-orange-400 bg-orange-900';
+            } else if (score <= 4) {
+                classification = 'MODERADA';
+                classificationColor = 'text-amber-400 bg-amber-900';
+            } else {
+                classification = 'FORTE';
+                classificationColor = 'text-emerald-400 bg-emerald-900';
+            }
+
+            let html = `
+                <div class="bg-cyber-900 border border-cyan-500 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-white">Resultado da Análise</h4>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${classificationColor}">${classification}</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-cyber-800 p-3 rounded-lg">
+                            <p class="text-xs text-gray-400">Comprimento</p>
+                            <p class="text-white font-bold">${password.length} caracteres</p>
+                        </div>
+                        <div class="bg-cyber-800 p-3 rounded-lg">
+                            <p class="text-xs text-gray-400">Tempo estimado para quebrar</p>
+                            <p class="text-white font-bold">${timeToCrack}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+            `;
+
+            feedback.forEach(f => {
+                const colors = {
+                    danger: 'bg-red-900/30 border-red-700 text-red-300',
+                    warning: 'bg-amber-900/30 border-amber-700 text-amber-300',
+                    info: 'bg-cyan-900/30 border-cyan-700 text-cyan-300',
+                    success: 'bg-emerald-900/30 border-emerald-700 text-emerald-300'
+                };
+                const icons = {
+                    danger: 'fa-times-circle',
+                    warning: 'fa-exclamation-triangle',
+                    info: 'fa-info-circle',
+                    success: 'fa-check-circle'
+                };
+                html += `
+                    <div class="flex items-center space-x-2 ${colors[f.type]} border rounded-lg p-2 text-sm">
+                        <i class="fa-solid ${icons[f.type]}"></i>
+                        <span>${f.text}</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                    <div class="mt-4 bg-cyan-900/20 border border-cyan-700 rounded-lg p-3">
+                        <p class="text-xs text-cyan-300"><i class="fa-solid fa-lightbulb mr-1"></i><strong>Dica:</strong> Use frases de memória como "MeuCarro2024&Tem4Pneus!" - são fáceis de lembrar e difíceis de quebrar.</p>
+                    </div>
+                </div>
+            `;
+
+            resultEl.innerHTML = html;
+        }
+
+        function generatePassword() {
+            const length = parseInt(document.getElementById('password-length').value) || 20;
+            const useUpper = document.getElementById('pwd-upper').checked;
+            const useLower = document.getElementById('pwd-lower').checked;
+            const useNumbers = document.getElementById('pwd-numbers').checked;
+            const useSymbols = document.getElementById('pwd-symbols').checked;
+
+            let charset = '';
+            if (useUpper) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (useLower) charset += 'abcdefghijklmnopqrstuvwxyz';
+            if (useNumbers) charset += '0123456789';
+            if (useSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+            if (!charset) {
+                alert('Selecione pelo menos uma opção de caracteres.');
+                return;
+            }
+
+            let password = '';
+            const array = new Uint32Array(length);
+            crypto.getRandomValues(array);
+            for (let i = 0; i < length; i++) {
+                password += charset[array[i] % charset.length];
+            }
+
+            document.getElementById('generated-pwd-text').textContent = password;
+            document.getElementById('generated-password').classList.remove('hidden');
+        }
+
+        function copyPassword() {
+            const password = document.getElementById('generated-pwd-text').textContent;
+            navigator.clipboard.writeText(password).then(() => {
+                alert('Senha copiada para a área de transferência!');
+            });
+        }
+    </script>
+</body>
+</html>
