@@ -46,6 +46,10 @@ const Auth = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Servidor acordando do modo sleep. Aguarde 30 segundos e tente novamente.');
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     return data;
@@ -57,6 +61,10 @@ const Auth = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Servidor acordando do modo sleep. Aguarde 30 segundos e tente novamente.');
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     this.setCredentials(data.token, data.username);
